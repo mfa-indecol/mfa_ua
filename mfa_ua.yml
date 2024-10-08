@@ -1,0 +1,11 @@
+name: mfa_ua
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - ipykernel
+  - numpy
+  - matplotlib
+  - scipy
+  - tqdm
+prefix: C:\Users\nilsdi\Anaconda3\envs\mfa_ua
