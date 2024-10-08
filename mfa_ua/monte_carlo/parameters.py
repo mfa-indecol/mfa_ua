@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as sts
@@ -6,7 +7,7 @@ from mfa_ua.parameter_estimation.right_skewed_lognorm import RightSkewedLognorm
 class UncertainEntity:
     '''
     Parent class for ScalarParamters and ConstantParameters.
-   Includes some basic dunder methods for namuing and comparing.
+    Includes some basic dunder methods for namuing and comparing.
     '''
     
     def __init__(self, name:str, short_name:str):
@@ -52,17 +53,17 @@ class ScalarParameter(UncertainEntity):
     figsize = (6,4.5) #default figure size for the plots
     # all supported distributions (in the find_sts function) and their 
     # required inputs (must have a value) are listed here for checks
-    conditions_dict = {'norm': [True, True, False, False],
-                       'truncnorm': [True, True, True, True],
-                       'lognorm': [True, True, True, False],
-                       'randint': [True, True, False, False],
-                       'uniform': [True, True, False, False],
-                       'triang': [True, True, True, False],
-                       'right skewed': [True, True, True, False]}
+    conditions_dict = {
+        'norm': [True, True, False, False],
+        'truncnorm': [True, True, True, True],
+        'lognorm': [True, True, True, False],
+        'randint': [True, True, False, False],
+        'uniform': [True, True, False, False],
+        'triang': [True, True, True, False],
+        'right skewed': [True, True, True, False]
+    }
     
-    def __init__(self, name:str, short_name:str, unit:str, distribution:str, para1:float = None, 
-                 para2:float = None, para3:float = None, para4:float = None, 
-                 low_lim:float = None, upp_lim:float = None) -> None:
+    def __init__(self, name:str, short_name:str, unit:str, distribution:str, para1:float = None, para2:float = None, para3:float = None, para4:float = None, low_lim:float = None, upp_lim:float = None) -> None:
         '''
         Sets attributes for the methods; parameters are 
         None by default, but most distributions require some values. 
