@@ -1,7 +1,14 @@
-# %%
+"""
+This module sets convenient classes for parameters in the Monte Carlo.
+These are used in the Sampler, but can also serve for visualisation.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as sts
+
+from pathlib import Path
+
 from mfa_ua.parameter_estimation.right_skewed_lognorm import RightSkewedLognorm
 
 
@@ -272,6 +279,7 @@ class ScalarParameter(UncertainEntity):
         no_bins: int = "auto",
         show: bool = True,
         figsize: tuple = None,
+        save_path: Path = None,
     ) -> tuple[plt.Figure, plt.Axes]:
         """
         Histogram of some (default 10000) samples.
@@ -281,6 +289,8 @@ class ScalarParameter(UncertainEntity):
             no_bins (int, optional): Number of bins for the histogram. Defaults to "auto".
             show (bool, optional): Whether or not to display the plot. Defaults to True.
             figsize (tuple, optional): Size of the figure. Defaults to None, then set to 6, 4.5.
+            save_path (Path, optional): Path to save the plot. Defaults to None (no saving).
+
         Returns:
             tuple[plt.Figure, plt.Axes]: Figure and Axes objects of the plot.
         """
@@ -301,11 +311,16 @@ class ScalarParameter(UncertainEntity):
             plt.show()
         else:
             plt.close()
-
+        if save_path:
+            fig.savefig(save_path, dpi=300, bbox_inches="tight")
         return fig, ax
 
     def plot_distribution(
-        self, x_range: list[float] = None, show: bool = True, figsize: tuple = None
+        self,
+        x_range: list[float] = None,
+        show: bool = True,
+        figsize: tuple = None,
+        save_path: Path = None,
     ) -> tuple[plt.Figure, plt.Axes]:
         """
         Simple PDF plot, (optionally from start - stop in x_range).
@@ -314,6 +329,7 @@ class ScalarParameter(UncertainEntity):
             x_range (list[float], optional): Range of x values to plot. Defaults to None.
             show (bool, optional): Whether or not to display the plot. Defaults to True.
             figsize (tuple, optional): Size of the figure. Defaults to None. (then set to 6, 4.5)
+            save_path (Path, optional): Path to save the plot. Defaults to None (no saving).
 
         Returns:
             tuple[plt.Figure, plt.Axes]: Figure and Axes objects of the plot.
@@ -330,6 +346,8 @@ class ScalarParameter(UncertainEntity):
             plt.show()
         else:
             plt.close()
+        if save_path:
+            fig.savefig(save_path, dpi=300, bbox_inches="tight")
         return fig, ax
 
     def _find_sts(self) -> tuple:  # [sts._continuous_distns.gen, dict]:
@@ -490,7 +508,7 @@ class ConstantParameter(UncertainEntity):
         self.value = value
 
     def ppf(self, x):
-        """Equivalent to ppf function"""
+        """Equivalent to ppf function - needed for LHS sampling."""
         return [self.value for _ in x]
 
     def sample(self, samplesize: int) -> np.ndarray:
