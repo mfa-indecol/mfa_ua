@@ -5,9 +5,8 @@ from mfa_ua.parameter_estimation.right_skewed_lognorm import RightSkewedLognorm
 
 class UncertainEntity:
     '''
-    Parent class to show what uncertain values must be able to do.
-    Also implements some basic dunder methods for convenience functions that can
-    be inherited.
+    Parent class for ScalarParamters and ConstantParameters.
+   Includes some basic dunder methods for namuing and comparing.
     '''
     
     def __init__(self, name:str, short_name:str):
@@ -15,7 +14,7 @@ class UncertainEntity:
         self.short_name = short_name
         
     def sampling(self, samplesize:int):
-        '''Returns samplesize many samples of the Entity'''
+        '''Necessary function that returns samplesize many samples'''
         return
     
     def __eq__(self, other):
@@ -33,7 +32,6 @@ class UncertainEntity:
         '''For straightup prints'''
         return self.__str__()
 
-#__________________________________________________________________________________________________
 class ScalarParameter(UncertainEntity):
     '''
     Distribution of an uncertain scalar (floating point) parameter.
@@ -175,7 +173,7 @@ class ScalarParameter(UncertainEntity):
                 raise ValueError(f'ppf inputs must be in between 0 and 1.')
         return self.distribution_function.ppf(x, **self.function_inputs)
 
-    def get_pdf(self, x_range:List[float] = None, n_x:int = 10**5, prec:int = 4)->List[np.ndarray]:
+    def get_pdf(self, x_range:list[float] = None, n_x:int = 10**5, prec:int = 4)->list[np.ndarray]:
         '''
         Creates an x and y array for the pdf of the distribution. 
         If no interval is specified, the first continuous interval of 
@@ -239,7 +237,7 @@ class ScalarParameter(UncertainEntity):
             plt.close() 
         return fig 
     
-    def plot_distribution(self, x_range:List[float] = None, prec:int = 4, show:bool = True)->plt.figure:
+    def plot_distribution(self, x_range:list[float] = None, prec:int = 4, show:bool = True)->plt.figure:
         '''Simple PDF plot, (optionally from start - stop in x_range).'''
         x, pdf = self.get_pdf(x_range = x_range,prec = prec)
         fig = plt.figure(figsize=self.figsize)
