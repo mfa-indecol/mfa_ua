@@ -2,8 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 from tqdm import tqdm
+from typing import Callable
+from pathlib import Path
 
-from mfa_ua.monte_carlo.sampling import Sampler
+from mfa_ua.monte_carlo.parameters import ScalarParameter, ConstantParameter
+from mfa_ua.monte_carlo.sampler import Sampler
 
 
 class MonteCarlo:
@@ -11,13 +14,13 @@ class MonteCarlo:
     For conducting an MC analysis, storing the results and visualizing them.
 
     Attributes:
-    - function: the function that is executed each iteration of the MC simulation
-    - sample: the Sampler object that provides the sets of inputs
-    - parameters: a list of parameters taken from the sample
-    - iterations: number of function executions and results
-    - result_lists: lists of each paramater with results from all runs
-    - results_sets: list of sets of all function outputs
-    - figures: visualisations of each result
+        function: the function that is executed each iteration of the MC simulation
+        sample: the Sampler object that provides the sets of inputs
+        parameters: a list of parameter objects from the Sampler
+        iterations: number of function executions and results
+        result_lists: lists of each paramater and the results from all runs
+        results_sets: sets of all function outputs
+        figures: visualisations of each result
     ______________________less important________________________________
     - no_parameters:
     - no_bins:
@@ -25,88 +28,79 @@ class MonteCarlo:
     - result_names: names of the results from the function
     - results_order: dict for easier retrieval of the results
     - results_types: scalar or timeseries and so on
-
-
-    Methods:
-    - analze: prepares everything and runs a MC simulation.
-    Optionally one can set iterations and bins for histograms;
-    visualizations can be made and shown with the respective keywords.
-    - histogram: histogram of named scalar result.
-    - plot_timeseries: plots uncertainty on a timeseries result.
     """
 
     def __init__(
         self,
-        function,
+        function: Callable[list, list[list]],
         sample: Sampler,
-        iterations: int = 10000,
-        no_bins: int = 100,
-        probablistic_model=False,
-        visualisations=False,
     ) -> None:
         """
-        Arguments:
-        - function: must give two outputs,  one vetor of objects for the
-        result(s) and one vector with the name(s) of these; it takes a
-        list of inputs in the order of parameters
-        - sample: a Sampler object with a list of parameters which will
-        make sets of function inputs
-        - iterations: number of MC iterations, default is 10k
-        - no_bins: number of bins for histograms, default is 100.
-        - probablistic_model: not yet supported, but if the model itself
-        contains random processes we could just reuse a single set of
-        parameters multiple times.
+        Initializes the MonteCarlo object without perfoming any calculations.
+
+        Args:
+            function: must take a list of parameters and return two lists,
+                           one with values, one with names.
+            sample: a Sampler object with parameters that fit the function (number and order)
         """
         self.function = function
         self.sample = sample
         self.parameters = sample.parameters
-        self.no_parameters = len(self.parameters)
-        self.iterations = iterations
-        self.no_bins = no_bins
-        self.visualisations = visualisations
+        self.n_parameters = len(self.parameters)
 
     def analyze(
-        self, iterations: int = None, no_bins: int = None, visualisations: bool = False
+        self,
+        iterations: int = 1000,
+        hist_nbins: int = "auto",
+        visualisations: bool = False,
+        show_progress_bar: bool = True,
     ) -> None:
         """
-        The main method of the MC class - conducts a full MonteCarlo
-        analysis and handles the results.
+        The main method of the MC class - conducts a MonteCarlo
+        analysis by applying the function to iterations many sets of samples
+        of the parameters and stores the results in the object.
 
-        Arguments:
-        - iterations: if one wants to change the iterations from the
-        number specified in the init (will overwrite init)
-        - no_bins: for the histograms (will overwrite init)
-        - visialisations: whether or not the results will be plotted.
+        Args:
+            iterations (int, optional): number of iterations to be performed (default 1000)
+            hist_nbins (int, optional): number of bins for the histograms (default "auto")
+            visualisations (bool, optional): whether or not the results will be plotted. (default False)
+            show_progress_bar (bool, optional): whether or not to show the progress bar. (default True)
+
+        Returns:
+            None
+
+        Raises:
+            Exception: if the function does not return the same names each time
+            Warning: if the function returns a list that is not supported
         """
         # prepare everything
-        # use default iterations and bins if not specified
-        if not iterations:
-            iterations = self.iterations
         self.iterations = iterations
-        if not visualisations:
-            visualisations = self.visualisations
-        self.visualisations = visualisations
-        if not no_bins:
-            no_bins = "auto"
-        self.no_bins = no_bins
         self._check_iterations()
-        # self._set_number_of_bins()
-        # TODO improve on no bins
+        self.hist_nbins = hist_nbins
 
         # calculating the outputs (this takes time!)
-        self.result_sets, self.l_r_names = zip(
-            *tqdm(
-                [
-                    self.function(inputs)
-                    for inputs in self.sample.parameter_sets[0 : self.iterations]
-                ]
+        if show_progress_bar:
+            self.result_sets, self.lists_result_names = zip(
+                *tqdm(
+                    [
+                        self.function(inp)
+                        for inp in self.sample.parameter_sets[:iterations]
+                    ],
+                    desc="Computing results for each iteration",
+                    total=iterations,
+                    leave=True,
+                )
             )
-        )
-        self.result_names = self.l_r_names[0]
+            self.result_names = self.lists_result_names[0]
+        else:
+            self.result_sets, self.lists_result_names = zip(
+                *[self.function(inp) for inp in self.sample.parameter_sets[:iterations]]
+            )
+            self.result_names = self.lists_result_names[0]
 
         # check if the same names are returned each time
-        for index, current in enumerate(self.l_r_names, start=1):
-            prior = self.l_r_names[index - 1]
+        for index, current in enumerate(self.lists_result_names, start=1):
+            prior = self.lists_result_names[index - 1]
             if prior != current:
                 raise Exception(
                     f"Your function does not always return the same names: in result "
@@ -126,75 +120,97 @@ class MonteCarlo:
         ):
             self.results_order[result_name] = index
             if type(result_example) == list:
-                if len(result_example) == 2:  # if time & results are specified
+                if (
+                    len(result_example) == 2
+                    and type(result_example[0]) == list
+                    and type(result_example[1] == list)
+                    and type(result_example[0][0]) in [int, float, np.float64]
+                ):  # if it looks like time & results are specified
                     self.results_type[result_name] = "timeseries"
                 else:
-                    self.results_type[result_name] = "not supported list"
+                    self.results_type[result_name] = "other list"
                     warnings.warn(
                         f"Your result {result_name} is a not identifiable list."
                     )
             elif type(result_example) in [int, float, np.float64]:
                 self.results_type[result_name] = "scalar"
             else:
-                self.results_type[result_name] = f"type(result_example)"
+                self.results_type[result_name] = f"{type(result_example)}"
                 warnings.warn(
                     f"the type of your result {result_name} is {type(result_example)},"
                     f"which means we cannnot plot it."
                 )
         # make and show plots as wished:
-        if self.visualisations:
-            self.figures = self._plot_results(show=True)
+        if visualisations:
+            self.figures = self._plot_results()
         return
 
-    def histogram(self, result_name: str, colour: str = "royalblue") -> plt.figure:
-        """A simple histogram for the scalar results of the MC"""
-        # prepare the data
+    def histogram(
+        self,
+        result_name: str,
+        color: str = "royalblue",
+        figsize: tuple = None,
+        save_path: Path = None,
+    ) -> tuple[plt.Figure, plt.Axes]:
+        """
+        A simple histogram for the scalar results of the MC.
+
+        Args:
+            result_name (str): name of the result to plot
+            color (str, optional): colour of the histogram. Defaults to "royalblue".
+            figsize (tuple, optional): size of the figure. Defaults to None => (6, 4.5).
+            save_path (Path, optional): path to save the figure. Defaults to None.
+
+        Returns:
+            tuple[plt.Figure, plt.Axes]: figure and axes of the histogram
+        """
+        if not figsize:
+            figsize = (6, 4.5)
+        # Prepare the data
         index = self.results_order[result_name]
         results = self.result_lists[index]
-        # do statistics:
-        mean = np.mean(results)
+
+        # Compute statistics
+        mu = np.mean(results)
         std = np.std(results)
 
-        fig = plt.figure(figsize=(6, 4.5))
-        n, _, _ = plt.hist(results, bins=self.no_bins, color=colour, alpha=0.8)
-        y_coord = [0, max(n)]  # for the stat intervals
-        plt.plot([mean, mean], y_coord, c="black", lw=2, label="mean", alpha=0.8)
-        plt.plot([mean + std, mean + std], y_coord, "--", c="black", lw=2, alpha=0.6)
-        plt.plot(
-            [mean - std, mean - std],
-            y_coord,
-            "--",
-            c="black",
-            lw=2,
-            alpha=0.6,
-            label="1 std - 68%",
+        # Create figure and axes
+        fig, ax = plt.subplots(figsize=figsize)
+
+        # Plot histogram
+        n, _, _ = ax.hist(results, bins=self.hist_nbins, color=color, alpha=0.8)
+        y_cs = [0, max(n)]  # For the stat intervals
+
+        # Plot mean and standard deviations
+        ax.plot([mu, mu], y_cs, c="k", lw=2, label="mean", alpha=0.8)
+        ax.plot([mu + std, mu + std], y_cs, "--", c="k", lw=2, alpha=0.6)
+        l1 = "1 std - 68%"
+        l2 = "2 stds - 95%"
+        ax.plot([mu - std, mu - std], y_cs, "--", c="k", lw=2, alpha=0.6, label=l1)
+        ax.plot([mu + 2 * std, mu + 2 * std], y_cs, ":", c="k", lw=2, alpha=0.4)
+        ax.plot(
+            [mu - 2 * std, mu - 2 * std], y_cs, ":", c="k", lw=2, alpha=0.4, label=l2
         )
-        plt.plot(
-            [mean + 2 * std, mean + 2 * std],
-            y_coord,
-            ls=":",
-            c="black",
-            lw=2,
-            alpha=0.4,
-        )
-        plt.plot(
-            [mean - 2 * std, mean - 2 * std],
-            y_coord,
-            ls=":",
-            c="black",
-            lw=2,
-            alpha=0.4,
-            label="2 stds - 95%",
-        )
-        plt.legend(loc="best")
-        plt.xlabel(f"Values of {result_name}")
-        plt.ylabel("Number of runs")
-        plt.title(
+
+        # Add legend, labels, and title
+        ax.legend(loc="best")
+        ax.set_xlabel(f"Values of {result_name}")
+        ax.set_ylabel("Number of runs")
+        ax.set_title(
             f"{result_name} results from MC simulation with {self.iterations} iterations"
         )
+
+        # Show plot
         plt.show()
-        plt.close()
-        return fig
+
+        # Save figure if save_path is provided
+        if save_path:
+            fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+        # Close the plot to free up memory
+        plt.close(fig)
+
+        return fig, ax
 
     def plot_timeseries(
         self,
@@ -203,9 +219,24 @@ class MonteCarlo:
         scatter: bool = False,
         y_unit="unknown",
         time_unit="unknown",
-        show: bool = True,
-    ) -> plt.figure:
-        """Plots timeseries with scatter plot and CI intervals."""
+        figsize: tuple = None,
+        save_path: Path = None,
+    ) -> tuple[plt.figure, plt.Axes]:
+        """
+        Plots timeseries with CI intervals. untested version.
+
+        Args:
+            result_name (str): name of the result to plot
+            colour (str, optional): colour of the plot. Defaults to "darkorange".
+            scatter (bool, optional): whether to plot scatter points. Defaults to False.
+            y_unit (str, optional): unit of the y-axis. Defaults to "unknown".
+            time_unit (str, optional): unit of the x-axis. Defaults to "unknown".
+            figsize (tuple, optional): size of the figure. Defaults to None => (20, 10).
+            save_path (Path, optional): path to save the figure. Defaults to None.
+
+        Returns:
+            tuple[plt.figure, plt.Axes]: figure and axes of the plot
+        """
         index = self.results_order[result_name]
         results = self.result_lists[index]
         result_by_year = [[] for _ in results[0][0]]
@@ -251,9 +282,8 @@ class MonteCarlo:
         plt.ylabel(f"{result_name} in {y_unit}.")
         plt.legend(loc="best")
         plt.title(f"{result_name} over time")
+        plt.show()
         plt.close()
-        if not show:
-            plt.close()
         return fig
 
     def _plot_results(self, show: bool = False) -> list[plt.figure]:
@@ -262,7 +292,7 @@ class MonteCarlo:
         # checks which results are timeseries to plot histograms or other plots.
         for name in self.result_names:
             if self.results_type[name] == "scalar":
-                fig = self.histogram(result_name=name)
+                fig, ax = self.histogram(result_name=name)
             elif self.results_type[name] == "timeseries":
                 fig = self.plot_timeseries(result_name=name)
             else:
@@ -271,27 +301,23 @@ class MonteCarlo:
                     f"be plotted here yet."
                 )
                 continue
-            figures.append(fig)
-        if show:
+            figures.append((fig, ax))
+        if show and False:
             plt.ion()
-            for fig in figures:
+            for fig, ax in figures:
                 if fig:  # if figure is not None
                     fig.show()
         return figures
 
-    def _set_number_of_bins(self) -> None:
-        """
-        number of bins is 100 per default, except no_iterations < 100,
-        then we use 1/10 times of the operations (but at least one).
-        """
-        if self.no_bins < self.iterations / 10:
-            self.no_bins = int(np.ceil(self.no_bins))
-        else:
-            self.no_bins = int(np.ceil(self.iterations / 10))
-        return
-
     def _check_iterations(self) -> None:
-        """Warns user of unreasonable inputs and ensures ok samples."""
+        """
+        Warns user of unreasonable inputs and ensures sufficient samples.
+
+        Raises:
+            Exception: if iterations are not a positive integer > 0.
+            Warning: if iterations are < 100.
+            Warning: if iterations < samplesize of sampler object.
+        """
         if self.iterations < 1:
             raise Exception(
                 f"You cannot have {self.iterations} iterations - use pos. integer!"
@@ -299,11 +325,6 @@ class MonteCarlo:
         elif self.iterations < 100:
             warnings.warn(
                 f"You use {self.iterations} iterations, that's probably not enough."
-            )
-        if self.iterations < self.sample.samplesize:
-            warnings.warn(
-                f"You want to do an MC with {self.iterations} iterations, but sampled"
-                f" more sets of inputs ({self.sample.samplesize})."
             )
 
         if self.iterations > self.sample.samplesize:
@@ -313,3 +334,4 @@ class MonteCarlo:
                 f"You picked more MC iterations than there were samples availabale, "
                 f"so we resampled with {self.iterations} in {mode} mode."
             )
+        return

@@ -1,11 +1,6 @@
 """
-File name: fit_lognormal.py
-Purpose: fit distribution for uncertainty analysis at NTNU IndEcol
-Author: Nils Dittrich
-Date created: 10.12.2022
-Date last modified: 16.02.2023
-Python Version: 3.9
-Status: completed
+Function to fit a assymetric lognormal distribution if one already
+found three points - lower bound, upper bound, and most likely value.
 """
 
 import numpy as np
@@ -15,9 +10,8 @@ import matplotlib.pyplot as plt
 from scipy.special import erfinv
 from scipy.optimize import fsolve
 
-from typing import Tuple
 import warnings
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 
 def lognorm_fit(
@@ -27,32 +21,37 @@ def lognorm_fit(
     precision: float = 0.05,
     CI_width: float = 0.95,
     diagnostics: bool = False,
-) -> Tuple[bool and float]:
+) -> tuple[bool and float]:
     """
     Fitting the scipy lognormal parameters using scipys fsolve.
     For an input of 3 points representing the lower and upper bound of a
     confidence interval as well as the mode for the lognormal distr..
     These three conditions allow the fit of shape, scale and loc.
 
-    Arguments:
-    - true_low: lower bound for the CI of the fitted value.
-    - true_upp: upper bound for the CI of the fitted value.
-    - true_mode: value with highest probability of the distribution.
+    Args:
+        true_low: lower bound for the CI of the fitted value.
+        true_upp: upper bound for the CI of the fitted value.
+        true_mode: value with highest probability of the distribution.
                  Closer to the lower bound (45%/90%) than upper bound.
-    - precision: maximally accepted deviation that the fitted CI and
+        precision: maximally accepted deviation that the fitted CI and
                  mode can have to the given points while still counting
                  as a successful fit. This is important when we struggle
                  to find a set of starting points that enables
                  convergence for the fsolver, meaning we might end up
                  with a local optimum and thus suboptimal fit overall.
-    - CI_width: how probable should it be that the values of the fitted
-                value are in between true low and true upp.
-    - diagnostics: whether or not to add  prints and figures during fits
+        CI_width: how probable should it be that the values of the fitted
+                distribution are in between true low and true upp.
+        diagnostics: whether or not to add  prints and figures during fits
 
     Returns:
-    - works: boolean that tells whether the fit succeeded or not
-    - distribution parameters: shape, scale and loc for successful fits,
-                               mean and std for unsuccessful fits
+        works: boolean that tells whether the fit succeeded or not
+        distribution parameters: shape, scale and loc for successful fits,
+                               mean and std  (for norm distribution) for unsuccessful fits
+
+    Raises:
+        Exception: if the mode is not within the bounds of low and upp
+        Warning: if the mode is not  skewed to the left
+        Warning: if the fit was not successful and a normal distribution is used instead
     """
     ## Check if the inputs can be used for a lognormal fit at all
     inputs_good = True

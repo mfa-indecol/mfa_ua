@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
 import scipy.stats as sts
-from pathlib import Path
 import warnings
 
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pathlib import Path
 
 from mfa_ua.monte_carlo.parameters import ScalarParameter, ConstantParameter
 
@@ -244,7 +243,7 @@ class Sampler:
         y = self.parameter_samples[index_y]
         z = self.parameter_samples[index_z]
 
-        fig = plt.figure(figsize=figsize)
+        fig = plt.figure(figsize=figsize, constrained_layout=True)
         ax = fig.add_subplot(111, projection="3d")
         color_map = plt.get_cmap(c_map)
         size_dots = (
@@ -252,7 +251,10 @@ class Sampler:
         )  # adjust as needed if it doesn't look nice.
 
         scatter_plot = ax.scatter(x, y, z, c=z, cmap=color_map, s=size_dots, alpha=0.5)
-        fig.colorbar(scatter_plot, ax=ax, shrink=0.35)
+
+        # Create a new axes for the colorbar
+        cax = fig.add_axes([0.15, 0.25, 0.03, 0.4])  # [left, bottom, width, height]
+        fig.colorbar(scatter_plot, cax=cax, orientation="vertical")
 
         ax.set_xlabel(
             f"Parameter {parameter1} in {self.parameters[index_x].unit}",
@@ -266,9 +268,6 @@ class Sampler:
             f"Parameter {parameter3} in {self.parameters[index_z].unit}",
             fontweight="bold",
         )
-        # TODO: move z label to the left (current doesn't work)
-        ax.zaxis.set_label_coords(0.5, -0.1)
-        ax.zaxis.labelpad = 10
         ax.set_title(
             f"3D SCATTER for {parameter1}, {parameter2} and {parameter3}",
             fontweight="bold",

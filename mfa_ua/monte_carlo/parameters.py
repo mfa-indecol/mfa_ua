@@ -501,11 +501,14 @@ class ConstantParameter(UncertainEntity):
     cases and False for the other half.
     """
 
-    def __init__(self, name: str, short_name: str, explanation: str, value) -> None:
+    def __init__(
+        self, name: str, short_name: str, explanation: str, value, unit: str = None
+    ) -> None:
         self.name = name
         self.short_name = short_name
         self.explanation = explanation
         self.value = value
+        self.unit = unit
 
     def ppf(self, x):
         """Equivalent to ppf function - needed for LHS sampling."""

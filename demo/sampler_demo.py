@@ -2,6 +2,7 @@
 from mfa_ua.monte_carlo.parameters import ScalarParameter, ConstantParameter
 from mfa_ua.monte_carlo.sampler import Sampler
 
+
 if __name__ == "__main__":
     # init two scalar parameters
     x = ScalarParameter("x", "x", "-", "uniform", 0, 1)
