@@ -1,9 +1,8 @@
-# %%
 import sympy as sy
 from typing import Callable
 
 
-def partial_derivate(
+def partially_derivate(
     function: Callable, all_parameters: list[sy.Symbol], single_parameter: sy.Symbol
 ) -> Callable:
     """
@@ -40,7 +39,7 @@ def get_sensitivity_for_parameter(
         dict[str,float]: A dict containing the absolute and relative sensitivity.
     """
     normal_operating_point = function(*all_parameters).subs(parameter_values)
-    partial_derivative = partial_derivate(function, all_parameters, single_parameter)
+    partial_derivative = partially_derivate(function, all_parameters, single_parameter)
     absolute_sensitivity = partial_derivative.subs(parameter_values)
     relative_sensitivity = (
         absolute_sensitivity
@@ -75,20 +74,3 @@ def get_sensitivities(
             function, parameters, parameter_values, parameter
         )
     return sensitivities
-
-
-if __name__ == "__main__":
-    x = sy.symbols("x")
-    y = sy.symbols("y")
-    z = sy.symbols("z")
-    w = sy.symbols("w")
-    all_parameters = [x, y, z, w]
-    parameter_values = {x: 1, y: 2, z: 3, w: 4}
-
-    def test_function(x, y, z, w):
-        return (x * y + x**z) * w
-
-    sensitivities = get_sensitivities(test_function, all_parameters, parameter_values)
-    print(sensitivities)
-
-# %%
