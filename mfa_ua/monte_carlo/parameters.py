@@ -16,11 +16,17 @@ class UncertainEntity:
     """
     Parent class for ScalarParamters and ConstantParameters.
     Includes some basic dunder methods for namuing and comparing.
+
+    Attributes:
+        name (str): Long (full) name of the parameter.
+        short_name (str): Abbreviation/super short name of the parameter.
+        unit (str): Very short unit for plots etc.
     """
 
-    def __init__(self, name: str, short_name: str):
+    def __init__(self, name: str, short_name: str, unit: str = None):
         self.name = name
         self.short_name = short_name
+        self.unit = unit
 
     def sampling(self, samplesize: int):
         """Necessary function that returns samplesize many samples"""
@@ -46,6 +52,21 @@ class ScalarParameter(UncertainEntity):
     """
     Distribution of an uncertain scalar (floating point) parameter.
     This class is wrapping a scipy.stats distribution.
+
+    Attributes:
+        name (str): Long (full) name of the parameter.
+        short_name (str): Abbreviation/super short name of the parameter.
+        unit (str): Very short unit for plots etc.
+        distribution (str): The distribution for your parameter.
+        parameter1 (float, optional): Optional parameter that defines the distribution.
+        parameter2 (float, optional): Optional parameter that defines the distribution.
+        parameter3 (float, optional): Optional parameter that defines the distribution.
+        parameter4 (float, optional): Optional parameter that defines the distribution.
+        lower_limit (float, optional): Lower limit for manual truncation of the distribution.
+        upper_limit (float, optional): Upper limit for manual truncation of the distribution.
+        distribution_function (scipy.stats distribution): The distribution function from scipy.stats.
+        function_inputs (dict): Dictionary of the inputs for the distribution function.
+        mean (float): Mean of the distribution
     """
 
     # all supported distributions (in the find_sts function) and their
@@ -499,6 +520,13 @@ class ConstantParameter(UncertainEntity):
     This class can also serve as a blueprint for other custom parameters
     - for example a boolean which is supposed to be True in half of all
     cases and False for the other half.
+
+    Attributes:
+        name (str): Long (full) name of the parameter.
+        short_name (str): Abbreviation/super short name of the parameter.
+        explanation (str): Explanation of the parameter.
+        value: Value of the parameter.
+        unit (str): Very short unit for plots etc.
     """
 
     def __init__(

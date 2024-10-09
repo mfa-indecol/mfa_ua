@@ -14,20 +14,17 @@ class MonteCarlo:
     For conducting an MC analysis, storing the results and visualizing them.
 
     Attributes:
-        function: the function that is executed each iteration of the MC simulation
+        function: the function applied at each iteration of the simulation
         sample: the Sampler object that provides the sets of inputs
         parameters: a list of parameter objects from the Sampler
         iterations: number of function executions and results
-        result_lists: lists of each paramater and the results from all runs
-        results_sets: sets of all function outputs
-        figures: visualisations of each result
-    ______________________less important________________________________
-    - no_parameters:
-    - no_bins:
-    - visualisations: True/False
-    - result_names: names of the results from the function
-    - results_order: dict for easier retrieval of the results
-    - results_types: scalar or timeseries and so on
+        result_lists: a list for each result, with iterations many entries
+        results_sets: iteration many sets of all function outputs
+        result_names: names of the results from the function
+        results_order: dict for easier retrieval of the results
+        results_type: scalar or timeseries and so on - for picking plots
+        figures: visualisations results
+        hist_nbins: number of bins for the histograms (defaults to 'auto')
     """
 
     def __init__(
@@ -46,7 +43,6 @@ class MonteCarlo:
         self.function = function
         self.sample = sample
         self.parameters = sample.parameters
-        self.n_parameters = len(self.parameters)
 
     def analyze(
         self,

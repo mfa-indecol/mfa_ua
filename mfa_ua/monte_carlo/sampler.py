@@ -12,6 +12,17 @@ class Sampler:
     Collection of probabilistically determined parameters  that
     are samples to create a set of parameter values for a
     MonteCarlo analysis. Also helps to visualize the samples.
+
+    Attributes:
+        parameters: list of parameters (ScalarParameter, ConstantParameter and similar)
+        n_parameters: number of parameters
+        parameters_order: dictionary with the order of the parameters
+        parameters_type: dictionary with the type of the parameters
+        parameter_samples: list of samples for each parameter
+        samplesize: number of sets to be created
+        mode: MC (default) or LHS (latin hypercube sampling)
+        parameter_sets: list of lists with the parameter values (samplesize x n_parameters)
+
     """
 
     parameter_samples = None  # for the __check samples method
