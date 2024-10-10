@@ -3,9 +3,11 @@ channels:
   - defaults
 dependencies:
   - python=3.12
-  - ipykernel
   - numpy
   - matplotlib
   - scipy
   - tqdm
-prefix: C:\Users\nilsdi\Anaconda3\envs\mfa_ua
+  - sympy
+  - pip
+  - pip:
+    - -e.
