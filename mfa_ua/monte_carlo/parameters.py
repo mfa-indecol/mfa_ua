@@ -327,7 +327,9 @@ class ScalarParameter(UncertainEntity):
             edgecolor="k",
             alpha=0.8,
         )
-
+        plt.xlabel(f"Values of parameter {self.name} in {self.unit}")
+        plt.ylabel(f"Frequency")
+        plt.title(f"Parameter  {self.name}: {samplesize} samples")
         if show:
             plt.show()
         else:

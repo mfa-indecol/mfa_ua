@@ -104,12 +104,18 @@ class Sampler:
                 self.parameter_samples.append(para.ppf(lhs_values[:, i]))
             self.parameter_sets = self._repackage(self.parameter_samples)
         else:
-            raise ValueError("Correlated sampling is not yet implemented.")
+            raise ValueError(f"No support for sampling in mode '{mode}'.")
         # TODO: check options for correlated MC sampling
         return self.parameter_sets
 
     def plot_2D(
-        self, parameter1: str, parameter2: str, show: bool = True, figsize: tuple = None
+        self,
+        parameter1: str,
+        parameter2: str,
+        n_samples: int = None,
+        show: bool = True,
+        figsize: tuple = None,
+        save_path: Path = None,
     ) -> tuple[plt.figure, plt.axis]:
         """
         Makes a scatterplot of the sample values of two parameters
@@ -123,15 +129,17 @@ class Sampler:
 
         Returns:
         """
+        if not n_samples:
+            n_samples = self.samplesize
         if not figsize:
             figsize = (6, 4.5)
         self._check_samples_for_plot(s_type="scalar", paras=[parameter1, parameter2])
         index_x = self.parameters_order[parameter1]
         index_y = self.parameters_order[parameter2]
-        x = self.parameter_samples[index_x]
-        y = self.parameter_samples[index_y]
+        x = self.parameter_samples[index_x][:n_samples]
+        y = self.parameter_samples[index_y][:n_samples]
         fig, ax = plt.subplots(figsize=figsize)
-        ax.scatter(x, y, s=10**5 / self.samplesize, c="crimson", alpha=0.6)
+        ax.scatter(x, y, s=10**4 / n_samples, c="crimson", alpha=0.6)
         ax.set_xlabel(f"Parameter {parameter1} in {self.parameters[index_x].unit}")
         ax.set_ylabel(f"Parameter {parameter2} in {self.parameters[index_y].unit}")
         ax.set_title(
@@ -142,6 +150,10 @@ class Sampler:
             plt.show()
         else:
             plt.close()
+
+        if save_path:
+            fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
         return fig, ax
 
     def plot_3D_old(
